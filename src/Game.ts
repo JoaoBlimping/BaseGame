@@ -11,9 +11,6 @@ module Scumbag
 
       this.state.add('Boot',Boot,false);
       this.state.add('Preloader',Preloader,false);
-      this.state.add('MainMenu',MainMenu,false);
-      this.state.add('Overworld',Overworld,false);
-      this.state.add('Gameover',Gameover,false);
       this.state.add('Credits',Credits,false);
 
       this.state.start('Boot');
