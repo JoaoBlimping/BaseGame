@@ -2,6 +2,16 @@
 
 module Scumbag
 {
+  export interface KeyboardKeyset
+  {
+    buttons:    Array<number>;
+    up:         number;
+    down:       number;
+    left:       number;
+    right:      number;
+  }
+
+
   /** a pretend gamepad that actually uses the keyboard */
   export class KeyboardInputDevice extends InputDevice
   {
@@ -11,19 +21,31 @@ module Scumbag
     private left:       Phaser.Key;
     private right:      Phaser.Key;
 
-    constructor(game:Phaser.Game)
+    constructor(game:Phaser.Game,keyset:KeyboardKeyset=null)
     {
       super();
-      this.buttons = new Array<Phaser.Key>(Button.nButtons);
-      this.buttons[Button.Shoot] = game.input.keyboard.addKey(Phaser.KeyCode.Z);
-      this.buttons[Button.Strafe] = game.input.keyboard.addKey(Phaser.KeyCode.SHIFT);
-      this.buttons[Button.Bomb] = game.input.keyboard.addKey(Phaser.KeyCode.X);
-      this.buttons[Button.Pause] = game.input.keyboard.addKey(Phaser.KeyCode.ESC);
 
-      this.up = game.input.keyboard.addKey(Phaser.KeyCode.UP);
-      this.down = game.input.keyboard.addKey(Phaser.KeyCode.DOWN);
-      this.left = game.input.keyboard.addKey(Phaser.KeyCode.LEFT);
-      this.right = game.input.keyboard.addKey(Phaser.KeyCode.RIGHT);
+      if (keyset == null)
+      {
+        this.buttons = new Array<Phaser.Key>(Button.nButtons);
+        this.buttons[Button.Shoot] = game.input.keyboard.addKey(Phaser.KeyCode.Z);
+        this.buttons[Button.Strafe] = game.input.keyboard.addKey(Phaser.KeyCode.SHIFT);
+        this.buttons[Button.Bomb] = game.input.keyboard.addKey(Phaser.KeyCode.X);
+        this.buttons[Button.Pause] = game.input.keyboard.addKey(Phaser.KeyCode.ESC);
+        game.input.keyboard.addKey(Phaser.KeyCode.UP);
+        game.input.keyboard.addKey(Phaser.KeyCode.DOWN);
+        game.input.keyboard.addKey(Phaser.KeyCode.LEFT);
+        game.input.keyboard.addKey(Phaser.KeyCode.RIGHT);
+      }
+      else
+      {
+        this.buttons = [];
+        for (let button in Button) this.buttons[button] = game.input.keyboard.addKey(keyset.buttons[button]);
+        this.up = game.input.keyboard.addKey(keyset.up);
+        this.down = game.input.keyboard.addKey(keyset.down);
+        this.left = game.input.keyboard.addKey(keyset.left);
+        this.right = game.input.keyboard.addKey(keyset.right);
+      }
     }
 
 

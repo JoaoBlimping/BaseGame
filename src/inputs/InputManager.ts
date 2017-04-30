@@ -1,27 +1,15 @@
 module Scumbag
 {
 
-
-  const N_INPUT_DEVICES = 1;
-
   export namespace InputManager
   {
-    let inputDevices = Array<InputDevice>(N_INPUT_DEVICES);
+    let inputDevices = Array<InputDevice>();
 
-    export function init(game:Phaser.Game):void
+    export function init(game:Phaser.Game,...keysets:KeyboardKeyset[]):void
     {
-      let pad = game.input.gamepad.pad1;
-
-      if (game.input.gamepad.supported && game.input.gamepad.active &&
-          pad.connected)
+      for (let i = 0;i < keysets.length;i++)
       {
-        console.log("using gamepad");
-        inputDevices[0] = new GamepadInputDevice(pad);
-      }
-      else
-      {
-        console.log("using keyboard");
-        inputDevices[0] = new KeyboardInputDevice(game);
+        inputDevices.push(new KeyboardInputDevice(game,keysets[i]))
       }
     }
 

@@ -20,7 +20,7 @@ module Scumbag
     }
 
     /** play some song unless it's already playing */
-    export function playSong(key:string,channel:MusicChannel):void
+    export function playSong(key:string,channel:MusicChannel=MusicChannel.Music):void
     {
       if (currentSongKey[channel] == key) return;
       if (currentSongKey[channel] != null)

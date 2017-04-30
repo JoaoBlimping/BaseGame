@@ -1,8 +1,17 @@
 {
   "main":
   [
-    {"type": "image","key": "outsideTiles","url": "images/outside.png"},
+    {"type": "image","key": "face1","url": "images/face1.png"},
+    {"type": "image","key": "face2","url": "images/face2.png"},
+    {"type": "image","key": "derren","url": "images/derren.png"},
+    {"type": "image","key": "sproingo","url": "images/sproingo.png"},
+    {"type": "image","key": "start","url": "images/title.png"},
+    {"type": "image","key": "background","url": "images/background.png"},
+    {"type": "image","key": "fog","url": "images/fog.png"},
 
-    {"type":"audio","key":"first","urls":["audio/first.ogg"],"autoDecode":true},
+    {"type":"audio","key":"music","urls":["audio/music.ogg"],"autoDecode":true},
+    {"type":"audio","key":"hit1","urls":["audio/hit1.ogg"],"autoDecode":true},
+    {"type":"audio","key":"hit2","urls":["audio/hit2.ogg"],"autoDecode":true},
+    {"type":"audio","key":"clash","urls":["audio/clash.ogg"],"autoDecode":true}
   ]
 }

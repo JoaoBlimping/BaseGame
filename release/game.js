@@ -37,10 +37,11 @@ var Scumbag;
 (function (Scumbag) {
     class Game extends Phaser.Game {
         constructor() {
-            super(832, 410, Phaser.AUTO, 'content', null, false, false);
+            super(1200, 567, Phaser.AUTO, 'content', null, false, false);
             this.state.add('Boot', Scumbag.Boot, false);
             this.state.add('Preloader', Scumbag.Preloader, false);
-            this.state.add('Credits', Scumbag.Credits, false);
+            this.state.add('Level', Scumbag.Level, false);
+            this.state.add('Win', Scumbag.Win, false);
             this.state.start('Boot');
         }
     }
@@ -63,7 +64,7 @@ var Scumbag;
             game = theGame;
         }
         MusicManager.init = init;
-        function playSong(key, channel) {
+        function playSong(key, channel = MusicChannel.Music) {
             if (currentSongKey[channel] == key)
                 return;
             if (currentSongKey[channel] != null) {
@@ -88,6 +89,31 @@ var Scumbag;
         }
         MusicManager.fadeOut = fadeOut;
     })(MusicManager = Scumbag.MusicManager || (Scumbag.MusicManager = {}));
+})(Scumbag || (Scumbag = {}));
+var Scumbag;
+(function (Scumbag) {
+    class Player extends Phaser.Sprite {
+        constructor(game, x, y, key, n) {
+            super(game, x, y, key);
+            this.n = n;
+            Scumbag.loadAnimations(this, this.game);
+            this.health = 3;
+        }
+        update() {
+            let elapsed = this.game.time.elapsed / 1000;
+            let input = Scumbag.InputManager.getInputDevice(this.n);
+            this.x += input.getAxisState(Scumbag.Axis.Horizontal) * elapsed * 400;
+            this.y += input.getAxisState(Scumbag.Axis.Vertical) * elapsed * 400;
+            for (let child of this.children)
+                child.update();
+        }
+        kill() {
+            this.game.state.start("Win", true, false, this.n);
+            return this;
+        }
+    }
+    Scumbag.Player = Player;
+    ;
 })(Scumbag || (Scumbag = {}));
 var Scumbag;
 (function (Scumbag) {
@@ -117,6 +143,8 @@ var Scumbag;
 (function (Scumbag) {
     function loadAnimations(sprite, game) {
         let animations = game.cache.getJSON("animations").animations[sprite.key];
+        if (animations == undefined)
+            return;
         for (let animation of animations) {
             sprite.animations.add(animation.name, Scumbag.Util.range(animation.frames[0] - 1, animation.frames[1] - 1), animation.fps, animation.loop);
         }
@@ -172,6 +200,35 @@ var Scumbag;
     ;
 })(Scumbag || (Scumbag = {}));
 ;
+var Scumbag;
+(function (Scumbag) {
+    class Worm extends Phaser.Sprite {
+        constructor(game, x, y) {
+            super(game, x, y, "worm");
+            this.timer = 0;
+            this.doom = false;
+            Scumbag.loadAnimations(this, this.game);
+            this.animations.play("wriggle");
+            this.anchor.set(0.5);
+            this.rotation = Math.random() * Math.PI * 2;
+        }
+        update() {
+            if (this.doom) {
+                this.destroy();
+                return;
+            }
+            this.timer += this.game.time.elapsed;
+            this.rotation = Math.sin(this.timer / 1000);
+            for (let child of this.children)
+                child.update();
+        }
+        doomed() {
+            this.doom = true;
+        }
+    }
+    Scumbag.Worm = Worm;
+    ;
+})(Scumbag || (Scumbag = {}));
 var Scumbag;
 (function (Scumbag) {
     (function (Button) {
@@ -232,20 +289,12 @@ var Scumbag;
 })(Scumbag || (Scumbag = {}));
 var Scumbag;
 (function (Scumbag) {
-    const N_INPUT_DEVICES = 1;
     var InputManager;
     (function (InputManager) {
-        let inputDevices = Array(N_INPUT_DEVICES);
-        function init(game) {
-            let pad = game.input.gamepad.pad1;
-            if (game.input.gamepad.supported && game.input.gamepad.active &&
-                pad.connected) {
-                console.log("using gamepad");
-                inputDevices[0] = new Scumbag.GamepadInputDevice(pad);
-            }
-            else {
-                console.log("using keyboard");
-                inputDevices[0] = new Scumbag.KeyboardInputDevice(game);
+        let inputDevices = Array();
+        function init(game, ...keysets) {
+            for (let i = 0; i < keysets.length; i++) {
+                inputDevices.push(new Scumbag.KeyboardInputDevice(game, keysets[i]));
             }
         }
         InputManager.init = init;
@@ -258,17 +307,28 @@ var Scumbag;
 var Scumbag;
 (function (Scumbag) {
     class KeyboardInputDevice extends Scumbag.InputDevice {
-        constructor(game) {
+        constructor(game, keyset = null) {
             super();
-            this.buttons = new Array(Scumbag.Button.nButtons);
-            this.buttons[Scumbag.Button.Shoot] = game.input.keyboard.addKey(Phaser.KeyCode.Z);
-            this.buttons[Scumbag.Button.Strafe] = game.input.keyboard.addKey(Phaser.KeyCode.SHIFT);
-            this.buttons[Scumbag.Button.Bomb] = game.input.keyboard.addKey(Phaser.KeyCode.X);
-            this.buttons[Scumbag.Button.Pause] = game.input.keyboard.addKey(Phaser.KeyCode.ESC);
-            this.up = game.input.keyboard.addKey(Phaser.KeyCode.UP);
-            this.down = game.input.keyboard.addKey(Phaser.KeyCode.DOWN);
-            this.left = game.input.keyboard.addKey(Phaser.KeyCode.LEFT);
-            this.right = game.input.keyboard.addKey(Phaser.KeyCode.RIGHT);
+            if (keyset == null) {
+                this.buttons = new Array(Scumbag.Button.nButtons);
+                this.buttons[Scumbag.Button.Shoot] = game.input.keyboard.addKey(Phaser.KeyCode.Z);
+                this.buttons[Scumbag.Button.Strafe] = game.input.keyboard.addKey(Phaser.KeyCode.SHIFT);
+                this.buttons[Scumbag.Button.Bomb] = game.input.keyboard.addKey(Phaser.KeyCode.X);
+                this.buttons[Scumbag.Button.Pause] = game.input.keyboard.addKey(Phaser.KeyCode.ESC);
+                game.input.keyboard.addKey(Phaser.KeyCode.UP);
+                game.input.keyboard.addKey(Phaser.KeyCode.DOWN);
+                game.input.keyboard.addKey(Phaser.KeyCode.LEFT);
+                game.input.keyboard.addKey(Phaser.KeyCode.RIGHT);
+            }
+            else {
+                this.buttons = [];
+                for (let button in Scumbag.Button)
+                    this.buttons[button] = game.input.keyboard.addKey(keyset.buttons[button]);
+                this.up = game.input.keyboard.addKey(keyset.up);
+                this.down = game.input.keyboard.addKey(keyset.down);
+                this.left = game.input.keyboard.addKey(keyset.left);
+                this.right = game.input.keyboard.addKey(keyset.right);
+            }
         }
         getButtonState(button) {
             return this.buttons[button].isDown;
@@ -328,85 +388,144 @@ var Scumbag;
 })(Scumbag || (Scumbag = {}));
 var Scumbag;
 (function (Scumbag) {
-    const PADDING = 40;
-    let headingFont = { font: "50px Serif", fontStyle: "bold", fill: "#f00", stroke: "#00f", strokeThickness: 5 };
-    let bodyFont = { font: "20px Serif", fill: "#ff6", align: "center", wordWrap: true, wordWrapWidth: 0 };
-    let outside;
-    let stop = false;
-    function move(a) {
-        a.y -= 0.6;
-        if (a.y > 0)
-            outside = false;
-    }
-    class Credits extends Phaser.State {
-        init(score = 0) {
-            this.score = score;
+    function getAllChildren(worms) {
+        let newWorms = [];
+        for (let worm of worms) {
+            if (worm.alive)
+                newWorms.push(worm);
+            newWorms.concat(getAllChildren(worm.children));
         }
+        return newWorms;
+    }
+    function controlChildren(worms, freeWorms, players, currentPlayer, game) {
+        for (let worm of worms)
+            if (worm.children.length > 0)
+                controlChildren(worm.children, freeWorms, players, currentPlayer, game);
+        for (let worm of worms) {
+            if (!worm.alive)
+                continue;
+            for (let player of players.children) {
+                if (player == currentPlayer)
+                    continue;
+                if (worm.overlap(player)) {
+                    game.sound.play("hit" + Math.floor(Math.random() * 2 + 1));
+                    player.damage(1);
+                    worm.doomed();
+                }
+                let children = getAllChildren(player.children);
+                for (let child of children) {
+                    if (worm.overlap(child) && child.children.length < 2) {
+                        game.sound.play("clash");
+                        if (child.children.length < 2)
+                            child.doomed();
+                        if (worm.children.length < 2)
+                            worm.doomed();
+                    }
+                }
+            }
+            if (worm.children.length > 1)
+                continue;
+            for (let freeWorm of freeWorms) {
+                if (worm.overlap(freeWorm)) {
+                    freeWorm.position.x -= worm.worldPosition.x;
+                    freeWorm.position.y -= worm.worldPosition.y;
+                    worm.addChild(freeWorm);
+                }
+            }
+        }
+    }
+    class Level extends Phaser.State {
         create() {
-            let data = this.game.cache.getJSON("credits");
-            this.background = this.add.sprite(0, 0, data.background);
-            Scumbag.MusicManager.stopSong(Scumbag.MusicChannel.Ambience);
-            Scumbag.MusicManager.playSong(data.music, Scumbag.MusicChannel.Music);
-            bodyFont.wordWrapWidth = this.game.width;
-            this.items = this.game.add.group();
-            let y = this.game.height;
-            for (let i = 0; i < data.items.length; i++) {
-                let item;
-                if (data.items[i].type == "text") {
-                    item = this.game.add.text(this.game.width / 2, y, data.items[i].content, bodyFont);
-                }
-                else if (data.items[i].type == "heading") {
-                    item = this.game.add.text(this.game.width / 2, y, data.items[i].content, headingFont);
-                    item.setShadow(0, 0, 'rgba(0,1,0,1)', 5);
-                    item.update = function () {
-                        this.strokeThickness = Math.random() * 36 + Math.sin(this.y / 8) * 20;
-                    };
-                }
-                else if (data.items[i].type == "image") {
-                    item = this.game.add.image(this.game.width / 2, y, data.items[i].content);
-                }
-                else if (data.items[i].type == "score") {
-                    item = this.game.add.text(this.game.width / 2, y, "your score is " + this.score, bodyFont);
-                }
-                item.anchor.setTo(0.5, 0);
-                this.items.add(item);
-                y += item.height + PADDING;
+            this.background = new Scumbag.Background("junk", this.game);
+            Scumbag.MusicManager.playSong("music", Scumbag.MusicChannel.Music);
+            this.players = new Phaser.Group(this.game);
+            for (let i = 0; i < 2; i++) {
+                let player = new Scumbag.Player(this.game, this.game.width / 3 * (i + 1), this.game.height / 2, "face" + (i + 1), i);
+                player.anchor.set(0.5);
+                this.players.add(player);
+            }
+            this.worms = new Phaser.Group(this.game);
+            for (let i = 0; i < 55; i++) {
+                let worm = new Scumbag.Worm(this.game, Math.random() * this.game.width, Math.random() * this.game.height);
+                this.worms.add(worm);
             }
         }
         update() {
-            outside = true;
-            this.items.forEach(move, null);
-            if (outside && !stop) {
-                let tween = this.add.tween(this.background).to({ alpha: 0 }, 2000, Phaser.Easing.Default, true);
-                tween.onComplete.add(function () { this.game.state.start("MainMenu", true, false); }, this);
-                stop = true;
+            this.background.update();
+            let elapsed = this.game.time.elapsed / 1000;
+            if (Math.random() < 0.2) {
+                let worm = new Scumbag.Worm(this.game, Math.random() * this.game.width, Math.random() * this.game.height);
+                this.worms.add(worm);
+            }
+            this.worms.forEachAlive(function (worm) {
+                for (let player of this.players.children) {
+                    if (worm.overlap(player)) {
+                        worm.position.x -= player.position.x;
+                        worm.position.y -= player.position.y;
+                        player.addChild(worm);
+                    }
+                }
+            }, this);
+            for (let player of this.players.children) {
+                controlChildren(player.children, this.worms.children, this.players, player, this.game);
             }
         }
     }
-    Scumbag.Credits = Credits;
+    Scumbag.Level = Level;
 })(Scumbag || (Scumbag = {}));
 var Scumbag;
 (function (Scumbag) {
+    const P1_CONTROLS = {
+        buttons: [],
+        up: Phaser.KeyCode.UP,
+        down: Phaser.KeyCode.DOWN,
+        left: Phaser.KeyCode.LEFT,
+        right: Phaser.KeyCode.RIGHT
+    };
+    const P2_CONTROLS = {
+        buttons: [],
+        up: Phaser.KeyCode.W,
+        down: Phaser.KeyCode.S,
+        left: Phaser.KeyCode.A,
+        right: Phaser.KeyCode.D
+    };
     class Preloader extends Phaser.State {
         preload() {
             this.preloadBar = this.add.sprite(0, 0, 'preloadBar');
             this.load.setPreloadSprite(this.preloadBar);
             this.game.load.pack("main", "pack.json");
             this.game.load.pack("sprites", "spritePack.json");
-            this.game.load.pack("scripts", "scriptPack.json");
             this.game.load.json("animations", "animations.json");
-            this.game.load.json("enemies", "data/enemies.json");
-            this.game.load.json("credits", "data/credits.json");
             this.game.load.json("backgrounds", "data/backgrounds.json");
+            Scumbag.InputManager.init(this.game, P1_CONTROLS, P2_CONTROLS);
         }
         create() {
             var tween = this.add.tween(this.preloadBar).to({ alpha: 0 }, 1000, Phaser.Easing.Linear.None, true);
             tween.onComplete.add(this.startMainMenu, this);
         }
         startMainMenu() {
-            this.game.state.start('MainMenu', true, false);
+            this.game.state.start('Win', true, false, -1);
         }
     }
     Scumbag.Preloader = Preloader;
+})(Scumbag || (Scumbag = {}));
+var Scumbag;
+(function (Scumbag) {
+    class Win extends Phaser.State {
+        init(winner) {
+            if (winner == 0)
+                this.pic = this.game.add.image(0, 0, "sproingo");
+            if (winner == 1)
+                this.pic = this.game.add.image(0, 0, "derren");
+            if (winner == -1)
+                this.pic = this.game.add.image(0, 0, "start");
+            this.space = this.game.input.keyboard.addKey(Phaser.KeyCode.SPACEBAR);
+        }
+        update() {
+            if (this.space.isDown)
+                this.game.state.start("Level");
+        }
+    }
+    Scumbag.Win = Win;
 })(Scumbag || (Scumbag = {}));
 //# sourceMappingURL=game.js.map

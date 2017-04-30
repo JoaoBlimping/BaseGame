@@ -3,6 +3,8 @@ module Scumbag
   export function loadAnimations(sprite:Phaser.Sprite,game:Phaser.Game):void
   {
     let animations = game.cache.getJSON("animations").animations[<string>sprite.key];
+    if (animations == undefined) return;
+
     for (let animation of animations)
     {
       sprite.animations.add(animation.name,
